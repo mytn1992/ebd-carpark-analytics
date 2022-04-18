@@ -14,6 +14,7 @@ result_schema = StructType([
     StructField('car_park_no', StringType()),
     StructField('latitude', StringType()),
     StructField('longitude', StringType()),
+    StructField('total_lots', StringType()),
     StructField('y', IntegerType()),
     StructField('yhat', IntegerType()),
     StructField('yhat_upper', IntegerType()),
@@ -30,13 +31,13 @@ def forecast_result(carpark_pd):
     num = forecast_pd._get_numeric_data()
     num[num < 0] = 0
     f_pd = forecast_pd[['ds', 'yhat', 'yhat_upper', 'yhat_lower']].set_index('ds')
-    cp_pd = carpark_pd[['ds', 'car_park_no', 'y', 'latitude', 'longitude']].set_index('ds')
+    cp_pd = carpark_pd[['ds', 'car_park_no', 'y', 'latitude', 'longitude', 'total_lots']].set_index('ds')
     result_pd = f_pd.join(cp_pd, how='left')
     result_pd.reset_index(level=0, inplace=True)
     result_pd['car_park_no'] = carpark_pd['car_park_no'].iloc[0]
     result_pd['latitude'] = carpark_pd['latitude'].iloc[0]
     result_pd['longitude'] = carpark_pd['longitude'].iloc[0]
-    return result_pd[['ds', 'car_park_no', 'latitude', 'longitude', 'y', 'yhat', 'yhat_upper', 'yhat_lower']]
+    return result_pd[['ds', 'car_park_no', 'latitude', 'longitude', 'total_lots', 'y', 'yhat', 'yhat_upper', 'yhat_lower']]
 
 
 # load data into panda dataframe and convert ds column to date time
@@ -45,6 +46,7 @@ df = pd.read_csv(path)
 df['ds'] = pd.to_datetime(df['ds'])
 df['latitude'] = df['latitude'].astype(str)
 df['longitude'] = df['longitude'].astype(str)
+df['total_lots'] = df['total_lots'].astype(str)
 # Convert to Spark dataframe
 sdf = spark.createDataFrame(df)
 sdf.printSchema()
