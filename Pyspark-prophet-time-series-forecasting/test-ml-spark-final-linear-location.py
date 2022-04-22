@@ -23,13 +23,18 @@ result_schema = StructType([
 
 @pandas_udf(result_schema, PandasUDFType.GROUPED_MAP)
 def forecast_result(carpark_pd):
+    # define model parameter
     model = Prophet(interval_width=0.95, growth='linear', daily_seasonality=True)
+    # model fitting
     model.fit(carpark_pd)
+    # make future dataframe with specified period and frequency
     future_pd = model.make_future_dataframe(periods=48, freq='30min', include_history=True)
+    # perform forecasting
     forecast_pd = model.predict(future_pd)
     # convert negative values to zero
     num = forecast_pd._get_numeric_data()
     num[num < 0] = 0
+    # join forecasted data with existing attributes
     f_pd = forecast_pd[['ds', 'yhat', 'yhat_upper', 'yhat_lower']].set_index('ds')
     cp_pd = carpark_pd[['ds', 'car_park_no', 'y', 'latitude', 'longitude', 'total_lots']].set_index('ds')
     result_pd = f_pd.join(cp_pd, how='left')
@@ -37,12 +42,14 @@ def forecast_result(carpark_pd):
     result_pd['car_park_no'] = carpark_pd['car_park_no'].iloc[0]
     result_pd['latitude'] = carpark_pd['latitude'].iloc[0]
     result_pd['longitude'] = carpark_pd['longitude'].iloc[0]
+    result_pd['total_lots'] = carpark_pd['total_lots'].iloc[0]
     return result_pd[['ds', 'car_park_no', 'latitude', 'longitude', 'total_lots', 'y', 'yhat', 'yhat_upper', 'yhat_lower']]
 
 
 # load data into panda dataframe and convert ds column to date time
-path = '/Users/matthew.yap/Documents/GoPratice/ebd-carpark-availability-producer/carpark_data_all_location.csv'
+path = '/Users/matthew.yap/Documents/GoPratice/ebd-carpark-availability-producer/carpark-all-location-today.csv'
 df = pd.read_csv(path)
+# data conversion
 df['ds'] = pd.to_datetime(df['ds'])
 df['latitude'] = df['latitude'].astype(str)
 df['longitude'] = df['longitude'].astype(str)
@@ -61,7 +68,7 @@ results.cache()
 results.show()
 
 # Save results to csv
-results.write.option("header", "true").mode('overwrite').format('csv').save('./testdata_all_location')
+results.write.option("header", "true").mode('overwrite').format('csv').save('./testdata_all_location_total_lots')
 
 # Visualize Some data
 # results.coalesce(1)
